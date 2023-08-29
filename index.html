@@ -80,25 +80,25 @@ function generateEmailFormat(availability) {
   return emailLines.join('\n');
 }
 
-async function getAvailabilityAndGenerateEmail() {
+async function getAvailabilityAndGenerateEmail(startDate, endDate) {
     let response;
     try {
-        const response = await gapi.client.calendar.freebusy.query({
-      items: [{ id: 'primary' }],
-      timeMin: `${startDate}T00:00:00Z`,
-      timeMax: `${endDate}T23:59:59Z`,
-    });
-      response = await gapi.client.calendar.freebusy.query(request);
+        response = await gapi.client.calendar.freebusy.query({
+            items: [{ id: 'primary' }],
+            timeMin: `${startDate}T00:00:00Z`,
+            timeMax: `${endDate}T23:59:59Z`,
+        });
     } catch (err) {
         document.getElementById('content').innerText = err.message;
-      return;
+        return;
     }
 
     const availability = response.result.calendars.primary;
    
     const emailFormat = generateEmailFormat(availability);
     document.getElementById('content').innerText = emailFormat;
-  }
+}
+   
 
 
 
