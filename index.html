@@ -1,30 +1,115 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Google Calendar API Quickstart</title>
+    <title>Availability Assistant</title>
     <meta charset="utf-8" />
   </head>
   <body>
-    <p>Google Calendar API Quickstart</p>
+    <p>Availability Assistant</p>
 
     <!--Add buttons to initiate auth sequence and sign out-->
     <button id="authorize_button" onclick="handleAuthClick()">Authorize</button>
     <button id="signout_button" onclick="handleSignoutClick()">Sign Out</button>
 
     <pre id="content" style="white-space: pre-wrap;"></pre>
+    <label for="start_date">Start Date:</label>
+<input type="date" id="start_date">
+<br>
+<label for="end_date">End Date:</label>
+<input type="date" id="end_date">
+<br>
+
+<button id="search_button" onclick="handleSearchClick()">Search Availability</button>
+
+
+
+
+
+
 
     <script type="text/javascript">
       /* exported gapiLoaded */
       /* exported gisLoaded */
       /* exported handleAuthClick */
       /* exported handleSignoutClick */
+      function handleSearchClick() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+
+    if (startDate && endDate) {
+      // Call the function to retrieve availability and generate email
+      getAvailabilityAndGenerateEmail(startDate, endDate);
+    } else {
+      // Show an error message if dates are not selected
+      document.getElementById('content').innerText = 'Please select both start and end dates.';
+    }
+  }
+
+  /**
+ * Generates an email format with availability information.
+ * @param {Object} availability Availability data from freebusy.query.
+ * @returns {string} Email format with availability.
+ */
+function generateEmailFormat(availability) {
+  
+
+  const busyIntervals = availability.busy || [];
+  const freeIntervals = availability.free || [];
+
+  const emailLines = [
+    `Dear [Name],`,
+    '',
+    `I hope this email finds you well. I am writing to inform you about my available times for the upcoming interview regarding the ${jobPosition} at ${companyName}.`,
+    'Based on my current schedule, I am available for an interview during the following time slots:',
+    '',
+  ];
+
+  freeIntervals.forEach((interval) => {
+    const startDate = new Date(interval.start);
+    const endDate = new Date(interval.end);
+    const dayOfWeek = startDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const date = startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    const startTime = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const endTime = endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const timeRange = `${startTime} - ${endTime}`;
+    emailLines.push(`${dayOfWeek}, ${date}, between ${timeRange}`);
+  });
+
+  emailLines.push('', 'Best regards,\n [Name]',);
+
+  return emailLines.join('\n');
+}
+
+async function getAvailabilityAndGenerateEmail() {
+    let response;
+    try {
+        const response = await gapi.client.calendar.freebusy.query({
+      items: [{ id: 'primary' }],
+      timeMin: `${startDate}T00:00:00Z`,
+      timeMax: `${endDate}T23:59:59Z`,
+    });
+      response = await gapi.client.calendar.freebusy.query(request);
+    } catch (err) {
+        document.getElementById('content').innerText = err.message;
+      return;
+    }
+
+    const availability = response.result.calendars.primary;
+   
+    const emailFormat = generateEmailFormat(availability);
+    document.getElementById('content').innerText = emailFormat;
+  }
+
+
 
       // TODO(developer): Set to client ID and API key from the Developer Console
       const CLIENT_ID = '405623283557-7p79vrb17mkq5c3qvtqj3ur5p64rsckh.apps.googleusercontent.com';
       const API_KEY = 'AIzaSyCseuKZGH9e08FiRfszgvb8TD8O-ua5Dls';
+     
 
       // Discovery doc URL for APIs used by the quickstart
       const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+      
 
       // Authorization scopes required by the API; multiple scopes can be
       // included, separated by spaces.
@@ -89,7 +174,8 @@
           }
           document.getElementById('signout_button').style.visibility = 'visible';
           document.getElementById('authorize_button').innerText = 'Refresh';
-          await listUpcomingEvents();
+          
+          await getAvailabilityAndGenerateEmail();
         };
 
         if (gapi.client.getToken() === null) {
